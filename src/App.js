@@ -16,12 +16,17 @@ import "./App.css";
 import { drawHand } from "./utilities";
 
 import {loveYouGesture} from "./LoveYou"; 
+import {gunGesture} from "./gun";
 
 ///////// NEW STUFF IMPORTS
 import * as fp from "fingerpose";
 import victory from "./victory.png";
-import thumbs_up from "./thumbs_up.png";
+// import thumbs_up from "./thumbs_up.png";
+import gun from "./gun.png";
+import shoot from "./shoot.png"; 
+
 ///////// NEW STUFF IMPORTS
+
 
 function App() {
   const webcamRef = useRef(null);
@@ -29,7 +34,12 @@ function App() {
 
   ///////// NEW STUFF ADDED STATE HOOK
   const [emoji, setEmoji] = useState(null);
-  const images = { thumbs_up: thumbs_up, victory: victory };
+  const [isShooting, setIsShooting] = useState(false); // Track shooting state
+  const images = {  
+                    // thumbs_up: thumbs_up, 
+                    victory: victory,
+                    gun: gun
+                  };
   ///////// NEW STUFF ADDED STATE HOOK
 
   const runHandpose = async () => {
@@ -70,8 +80,9 @@ function App() {
       if (hand.length > 0) {
         const GE = new fp.GestureEstimator([
           fp.Gestures.VictoryGesture,
-          fp.Gestures.ThumbsUpGesture,
-          loveYouGesture
+          // fp.Gestures.ThumbsUpGesture,
+          loveYouGesture,
+          gunGesture
         ]);
         const gesture = await GE.estimate(hand[0].landmarks, 4);
         if (gesture.gestures !== undefined && gesture.gestures.length > 0) {
@@ -85,6 +96,14 @@ function App() {
           );
           // console.log(gesture.gestures[maxConfidence].name);
           setEmoji(gesture.gestures[maxConfidence].name);
+
+          // Flash shooting image when gun gesture is detected
+          if (gesture.gestures[maxConfidence].name === "gun") {
+            setIsShooting(true);
+          } else {
+            setIsShooting(false);
+          }
+
           console.log(emoji);
         }
       }
@@ -99,6 +118,18 @@ function App() {
 
   useEffect(()=>{runHandpose()},[]);
 
+  // Handle shooting image flash
+  useEffect(() => {
+    if (isShooting) {
+      const interval = setInterval(() => {
+        setIsShooting((prev) => !prev); // Toggle visibility
+      }, 100); // Flash every second
+
+      return () => clearInterval(interval); // Cleanup on unmount or change
+    }
+  }, [isShooting]);
+  
+
   return (
     <div className="App">
       <header className="App-header">
@@ -111,12 +142,11 @@ function App() {
             left: 0,
             right: 0,
             textAlign: "center",
-            zindex: 9,
+            zIndex: 8,
             width: 640,
             height: 480,
           }}
         />
-
         <canvas
           ref={canvasRef}
           style={{
@@ -126,15 +156,16 @@ function App() {
             left: 0,
             right: 0,
             textAlign: "center",
-            zindex: 9,
+            zIndex: 9,
             width: 640,
             height: 480,
           }}
         />
-        {/* NEW STUFF */}
-        {emoji !== null ? (
+
+        {emoji !== null && (
           <img
             src={images[emoji]}
+            alt="gesture emoji"
             style={{
               position: "absolute",
               marginLeft: "auto",
@@ -146,11 +177,24 @@ function App() {
               height: 100,
             }}
           />
-        ) : (
-          ""
         )}
 
-        {/* NEW STUFF */}
+        {/* Flash the shooting image when gun gesture is detected */}
+        {isShooting && (
+          <img
+            src={shoot}
+            alt="shooting emoji"
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)", // Center the image
+              height: 1000,
+              width: 1000,
+              zIndex: 10, // Ensure it's on top of webcam and canvas
+              }}
+          />
+        )}
       </header>
     </div>
   );
